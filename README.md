@@ -1,69 +1,41 @@
-# Welcome to your Lovable project
+# 🖥️ Amazon Smart TV Web Scraper  
 
-## Project info
+This project is a **web scraper** that extracts detailed product information from **Amazon India** for **Smart TVs**.  
+It fetches key details like **ratings, discounts, bank offers, technical specifications, and AI-generated customer review summaries**.  
 
-**URL**: https://lovable.dev/projects/00e5e805-1d53-43a0-ba7b-07c00d55b685
+---
 
-## How can I edit this code?
+## 🚀 Live Demo  
+🔗 [**Click here to access the web scraper**](https://amazonsmarttvwebscraper.netlify.app/)  
 
-There are several ways of editing your application.
+---
 
-**Use Lovable**
+## ✨ Features  
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/00e5e805-1d53-43a0-ba7b-07c00d55b685) and start prompting.
+✅ Extracts **Product Name, Rating, Number of Ratings, and Price**  
+✅ Fetches **Total Discount & Bank Offers**  
+✅ Captures **Technical Product Information**  
+✅ Scrapes **Images from the Manufacturer Section**  
+✅ AI-generated **Customer Review Summary**  
 
-Changes made via Lovable will be committed automatically to this repo.
+---
 
-**Use your preferred IDE**
+## 🛠️ Tech Stack  
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+- **Frontend**: React.js, Tailwind CSS, Vite, ShadCN  
+- **Backend**: Node.js, Express.js  
+- **Database**: MongoDB / PostgreSQL  
+- **Web Scraping**: Puppeteer / Scrapy  
+- **AI Integration**: OpenAI API, ElevenLabs API  
+- **Cloud Deployment**: Netlify, Firebase, AWS  
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+---
 
-Follow these steps:
+## 🔧 How to Run Locally  
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+### 1️⃣ Clone the repository  
+```bash
+git clone https://github.com/YOUR_GITHUB/amazon-smart-tv-scraper.git
+cd amazon-smart-tv-scraper
+npm install
 npm run dev
-```
-
-**Edit a file directly in GitHub**
-
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
-
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with .
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/00e5e805-1d53-43a0-ba7b-07c00d55b685) and click on Share -> Publish.
-
-## I want to use a custom domain - is that possible?
-
-We don't support custom domains (yet). If you want to deploy your project under your own domain then we recommend using Netlify. Visit our docs for more details: [Custom domains](https://docs.lovable.dev/tips-tricks/custom-domain/)

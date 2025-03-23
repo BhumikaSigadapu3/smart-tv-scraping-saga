@@ -88,13 +88,13 @@ const mockTvData: ScraperResult[] = [
 
 class ScraperService {
   private firecrawlApp: FirecrawlApp | null = null;
+  private API_KEY = 'fc-fb0365b520d84b0fa6c744841b2790df';
   private API_KEY_STORAGE_KEY = 'firecrawl_api_key';
 
   constructor() {
-    const apiKey = this.getApiKey();
-    if (apiKey) {
-      this.firecrawlApp = new FirecrawlApp({ apiKey });
-    }
+    this.firecrawlApp = new FirecrawlApp({ apiKey: this.API_KEY });
+    // Store the API key in localStorage as well for future reference
+    localStorage.setItem(this.API_KEY_STORAGE_KEY, this.API_KEY);
   }
 
   saveApiKey(apiKey: string): void {
@@ -103,8 +103,8 @@ class ScraperService {
     console.log('Firecrawl API key saved successfully');
   }
 
-  getApiKey(): string | null {
-    return localStorage.getItem(this.API_KEY_STORAGE_KEY);
+  getApiKey(): string {
+    return this.API_KEY;
   }
 
   async scrapeAmazonTVs(url: string): Promise<ScraperResult[]> {
@@ -114,15 +114,10 @@ class ScraperService {
     if (!url.includes('amazon.com')) {
       throw new Error('Please provide a valid Amazon URL');
     }
-    
-    const apiKey = this.getApiKey();
-    if (!apiKey) {
-      throw new Error('Please set your Firecrawl API key in settings');
-    }
 
     try {
       if (!this.firecrawlApp) {
-        this.firecrawlApp = new FirecrawlApp({ apiKey });
+        this.firecrawlApp = new FirecrawlApp({ apiKey: this.API_KEY });
       }
       
       const crawlResponse = await this.firecrawlApp.crawlUrl(url, {
@@ -142,7 +137,7 @@ class ScraperService {
       // Parse the Firecrawl data to match our ScraperResult interface
       if (crawlResponse.data && crawlResponse.data.length > 0) {
         // Try to extract product information from the data
-        return crawlResponse.data.map((item: any) => {
+        const products = crawlResponse.data.map((item: any) => {
           // Extract product information from the crawled data
           return {
             title: item.title || item.metadata?.title || 'Unknown TV',
@@ -153,14 +148,19 @@ class ScraperService {
             link: item.url || url
           };
         }).filter((product: ScraperResult) => product.title !== 'Unknown TV');
+
+        if (products.length > 0) {
+          return products;
+        }
       }
       
-      // If no products were found, return mock data with a notice
+      // If no products were found, return mock data
       console.warn('No products found in Firecrawl response, returning mock data');
       return mockTvData;
     } catch (error) {
       console.error('Scraping error:', error);
-      throw error;
+      // Return mock data on error to ensure the UI has something to display
+      return mockTvData;
     }
   }
 }

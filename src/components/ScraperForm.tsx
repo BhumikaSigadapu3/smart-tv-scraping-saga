@@ -19,7 +19,7 @@ export default function ScraperForm({ onResults }: ScraperFormProps) {
     e.preventDefault();
     
     if (!url.trim()) {
-      toast.error('Please enter a valid Amazon product URL');
+      toast.error('Please enter a URL');
       return;
     }
     
@@ -53,7 +53,7 @@ export default function ScraperForm({ onResults }: ScraperFormProps) {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="relative">
             <Input
-              type="url"
+              type="text"
               placeholder="https://www.amazon.com/s?k=smart+tv"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
@@ -79,7 +79,7 @@ export default function ScraperForm({ onResults }: ScraperFormProps) {
             </div>
           </div>
           <div className="text-sm text-muted-foreground">
-            Enter an Amazon search URL or product page for Smart TVs to begin scraping
+            Enter an Amazon URL for Smart TVs to begin scraping
           </div>
         </form>
       </div>

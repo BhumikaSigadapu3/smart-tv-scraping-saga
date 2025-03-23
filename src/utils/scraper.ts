@@ -1,4 +1,3 @@
-
 import FirecrawlApp from '@mendable/firecrawl-js';
 
 interface ScraperResult {
@@ -110,10 +109,8 @@ class ScraperService {
   async scrapeAmazonTVs(url: string): Promise<ScraperResult[]> {
     console.log('Scraping URL with Firecrawl:', url);
     
-    // Validate that it's an Amazon URL
-    if (!url.includes('amazon.com')) {
-      throw new Error('Please provide a valid Amazon URL');
-    }
+    // Remove the Amazon URL validation to accept any URL
+    // We'll let the API handle any URL issues
 
     try {
       if (!this.firecrawlApp) {

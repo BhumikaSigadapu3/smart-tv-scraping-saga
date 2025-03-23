@@ -128,10 +128,7 @@ class ScraperService {
       const crawlResponse = await this.firecrawlApp.crawlUrl(url, {
         limit: 10,
         scrapeOptions: {
-          formats: ['markdown', 'html'],
-          extractors: {
-            products: true
-          }
+          formats: ['markdown', 'html']
         }
       });
 
@@ -143,15 +140,19 @@ class ScraperService {
       console.log('Crawl successful:', crawlResponse);
       
       // Parse the Firecrawl data to match our ScraperResult interface
-      if (crawlResponse.data && Array.isArray(crawlResponse.data.products)) {
-        return crawlResponse.data.products.map((product: any) => ({
-          title: product.title || 'Unknown TV',
-          price: product.price || 'Price unavailable',
-          rating: product.rating || '0',
-          features: product.features || [],
-          imageUrl: product.image || 'https://via.placeholder.com/300x200?text=No+Image',
-          link: product.url || url
-        }));
+      if (crawlResponse.data && crawlResponse.data.length > 0) {
+        // Try to extract product information from the data
+        return crawlResponse.data.map((item: any) => {
+          // Extract product information from the crawled data
+          return {
+            title: item.title || item.metadata?.title || 'Unknown TV',
+            price: item.metadata?.price || 'Price unavailable',
+            rating: item.metadata?.rating || '0',
+            features: item.metadata?.features || [],
+            imageUrl: item.metadata?.image || 'https://via.placeholder.com/300x200?text=No+Image',
+            link: item.url || url
+          };
+        }).filter((product: ScraperResult) => product.title !== 'Unknown TV');
       }
       
       // If no products were found, return mock data with a notice

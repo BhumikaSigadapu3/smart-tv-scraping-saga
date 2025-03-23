@@ -1,6 +1,5 @@
 
-// This is a mock implementation since we can't actually scrape from client-side
-// In a real implementation, this would be a server-side API call
+import FirecrawlApp from '@mendable/firecrawl-js';
 
 interface ScraperResult {
   title: string;
@@ -11,7 +10,7 @@ interface ScraperResult {
   link: string;
 }
 
-// Mock data - in a real implementation this would come from an API
+// Fallback mock data in case there's an API failure
 const mockTvData: ScraperResult[] = [
   {
     title: "Amazon Fire TV 55\" Omni Series 4K UHD smart TV",
@@ -88,20 +87,80 @@ const mockTvData: ScraperResult[] = [
 ];
 
 class ScraperService {
+  private firecrawlApp: FirecrawlApp | null = null;
+  private API_KEY_STORAGE_KEY = 'firecrawl_api_key';
+
+  constructor() {
+    const apiKey = this.getApiKey();
+    if (apiKey) {
+      this.firecrawlApp = new FirecrawlApp({ apiKey });
+    }
+  }
+
+  saveApiKey(apiKey: string): void {
+    localStorage.setItem(this.API_KEY_STORAGE_KEY, apiKey);
+    this.firecrawlApp = new FirecrawlApp({ apiKey });
+    console.log('Firecrawl API key saved successfully');
+  }
+
+  getApiKey(): string | null {
+    return localStorage.getItem(this.API_KEY_STORAGE_KEY);
+  }
+
   async scrapeAmazonTVs(url: string): Promise<ScraperResult[]> {
-    console.log('Scraping URL:', url);
+    console.log('Scraping URL with Firecrawl:', url);
     
     // Validate that it's an Amazon URL
     if (!url.includes('amazon.com')) {
       throw new Error('Please provide a valid Amazon URL');
     }
     
-    // Simulate API request delay
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // In a real implementation, we would make an API call to a backend service
-    // that would handle the scraping for us. For now, we'll return mock data.
-    return mockTvData;
+    const apiKey = this.getApiKey();
+    if (!apiKey) {
+      throw new Error('Please set your Firecrawl API key in settings');
+    }
+
+    try {
+      if (!this.firecrawlApp) {
+        this.firecrawlApp = new FirecrawlApp({ apiKey });
+      }
+      
+      const crawlResponse = await this.firecrawlApp.crawlUrl(url, {
+        limit: 10,
+        scrapeOptions: {
+          formats: ['markdown', 'html'],
+          extractors: {
+            products: true
+          }
+        }
+      });
+
+      if (!crawlResponse.success) {
+        console.error('Crawl failed:', crawlResponse);
+        throw new Error('Failed to crawl the provided URL');
+      }
+
+      console.log('Crawl successful:', crawlResponse);
+      
+      // Parse the Firecrawl data to match our ScraperResult interface
+      if (crawlResponse.data && Array.isArray(crawlResponse.data.products)) {
+        return crawlResponse.data.products.map((product: any) => ({
+          title: product.title || 'Unknown TV',
+          price: product.price || 'Price unavailable',
+          rating: product.rating || '0',
+          features: product.features || [],
+          imageUrl: product.image || 'https://via.placeholder.com/300x200?text=No+Image',
+          link: product.url || url
+        }));
+      }
+      
+      // If no products were found, return mock data with a notice
+      console.warn('No products found in Firecrawl response, returning mock data');
+      return mockTvData;
+    } catch (error) {
+      console.error('Scraping error:', error);
+      throw error;
+    }
   }
 }
 

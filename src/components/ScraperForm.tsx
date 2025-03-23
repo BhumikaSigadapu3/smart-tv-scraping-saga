@@ -1,11 +1,21 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Settings } from 'lucide-react';
 import { scraperService } from '@/utils/scraper';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogTrigger,
+  DialogFooter,
+  DialogClose
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 
 interface ScraperFormProps {
   onResults: (results: any[]) => void;
@@ -13,13 +23,41 @@ interface ScraperFormProps {
 
 export default function ScraperForm({ onResults }: ScraperFormProps) {
   const [url, setUrl] = useState('');
+  const [apiKey, setApiKey] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showApiDialog, setShowApiDialog] = useState(false);
+
+  useEffect(() => {
+    // Check if API key exists on component mount
+    const savedApiKey = scraperService.getApiKey();
+    if (savedApiKey) {
+      setApiKey(savedApiKey);
+    } else {
+      // If no API key found, show the dialog
+      setShowApiDialog(true);
+    }
+  }, []);
+
+  const saveApiKey = () => {
+    if (!apiKey.trim()) {
+      toast.error('Please enter a valid Firecrawl API key');
+      return;
+    }
+    scraperService.saveApiKey(apiKey.trim());
+    toast.success('API key saved successfully');
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!url.trim()) {
       toast.error('Please enter a valid Amazon product URL');
+      return;
+    }
+
+    if (!scraperService.getApiKey()) {
+      toast.error('Please set your Firecrawl API key first');
+      setShowApiDialog(true);
       return;
     }
     
@@ -47,7 +85,42 @@ export default function ScraperForm({ onResults }: ScraperFormProps) {
       className="w-full max-w-2xl mx-auto"
     >
       <div className="glass-card rounded-xl p-6 shadow-lg">
-        <h2 className="text-xl font-semibold mb-4">Enter Amazon Smart TV URL</h2>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-semibold">Enter Amazon Smart TV URL</h2>
+          <Dialog open={showApiDialog} onOpenChange={setShowApiDialog}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="icon">
+                <Settings className="h-4 w-4" />
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Firecrawl API Settings</DialogTitle>
+              </DialogHeader>
+              <div className="py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="api-key">API Key</Label>
+                  <Input
+                    id="api-key"
+                    value={apiKey}
+                    onChange={(e) => setApiKey(e.target.value)}
+                    placeholder="Enter your Firecrawl API key"
+                    type="password"
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    You need a Firecrawl API key to use the scraper. Get one at <a href="https://app.firecrawl.dev" target="_blank" rel="noopener noreferrer" className="text-primary underline">Firecrawl</a>.
+                  </p>
+                </div>
+              </div>
+              <DialogFooter>
+                <DialogClose asChild>
+                  <Button variant="outline">Cancel</Button>
+                </DialogClose>
+                <Button onClick={saveApiKey}>Save API Key</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="relative">
             <Input

@@ -12,10 +12,15 @@ interface SectionProps {
   children: React.ReactNode;
   className?: string;
   id?: string;
+  forwardedRef?: React.RefObject<HTMLElement>;
 }
 
-const Section = ({ children, className = '', id }: SectionProps) => (
-  <section id={id} className={`py-16 md:py-24 ${className}`}>
+const Section = ({ children, className = '', id, forwardedRef }: SectionProps) => (
+  <section 
+    id={id} 
+    className={`py-16 md:py-24 ${className}`}
+    ref={forwardedRef as React.RefObject<HTMLDivElement>}
+  >
     <div className="container px-6 mx-auto">
       {children}
     </div>
@@ -267,7 +272,7 @@ export default function Index() {
       
       {/* Results Section */}
       {results.length > 0 && (
-        <Section ref={resultsRef} className="pt-16">
+        <Section forwardedRef={resultsRef} className="pt-16">
           <div className="text-center mb-16">
             <motion.h2
               initial={{ opacity: 0, y: 20 }}

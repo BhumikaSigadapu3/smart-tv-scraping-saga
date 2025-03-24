@@ -10,8 +10,10 @@ interface ScraperFormProps {
   onResults: (results: any[]) => void;
 }
 
-// API endpoint URL
-const API_URL = 'http://localhost:5000/api/scraper';
+// API endpoint URL - dynamically determine the backend URL
+const API_URL = import.meta.env.PROD 
+  ? '/api/scraper'  // In production, use relative path (assuming backend is on same domain)
+  : 'http://localhost:5000/api/scraper';  // In development, use localhost with port
 
 export default function ScraperForm({ onResults }: ScraperFormProps) {
   const [url, setUrl] = useState('');
@@ -25,10 +27,16 @@ export default function ScraperForm({ onResults }: ScraperFormProps) {
       return;
     }
     
+    if (!url.includes('amazon.com')) {
+      toast.error('Please enter a valid Amazon URL');
+      return;
+    }
+    
     try {
       setIsLoading(true);
       toast.info('Starting the scraping process...', { duration: 3000 });
       
+      console.log('Sending scraping request to:', `${API_URL}/amazon`);
       const response = await fetch(`${API_URL}/amazon`, {
         method: 'POST',
         headers: {
@@ -49,7 +57,7 @@ export default function ScraperForm({ onResults }: ScraperFormProps) {
         onResults(result.data);
         toast.success('Scraping completed successfully!');
       } else {
-        throw new Error('No data received from the server');
+        throw new Error(result.message || 'No data received from the server');
       }
     } catch (error) {
       console.error('Scraping error:', error);
@@ -100,6 +108,9 @@ export default function ScraperForm({ onResults }: ScraperFormProps) {
           </div>
           <div className="text-sm text-muted-foreground">
             Enter an Amazon product URL to extract detailed information including product name, price, ratings, discounts, bank offers, technical specifications, and images.
+          </div>
+          <div className="text-xs text-yellow-600">
+            Note: This application requires the backend server to be running on port 5000. Make sure to start the server with `npm start` in the server directory.
           </div>
         </form>
       </div>

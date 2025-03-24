@@ -6,24 +6,29 @@ exports.scrapeAmazonProduct = async (req, res) => {
     const { url } = req.body;
     
     if (!url) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'URL is required' 
+      return res.status(400).json({
+        success: false,
+        message: 'URL is required'
       });
     }
     
-    console.log(`Attempting to scrape URL: ${url}`);
-    const results = await scraperService.scrapeAmazonProduct(url);
+    // Validate URL format
+    if (!url.includes('amazon.com')) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid Amazon URL'
+      });
+    }
     
-    return res.status(200).json({
-      success: true,
-      data: results
-    });
+    console.log('Received scraping request for URL:', url);
+    const result = await scraperService.scrapeAmazonProduct(url);
+    
+    return res.status(result.success ? 200 : 500).json(result);
   } catch (error) {
-    console.error('Error in scrapeAmazonProduct controller:', error);
+    console.error('Controller error in scrapeAmazonProduct:', error);
     return res.status(500).json({
       success: false,
-      message: error.message || 'An error occurred while scraping the product'
+      message: error.message || 'An error occurred during scraping'
     });
   }
 };
@@ -33,20 +38,20 @@ exports.verifyApiKey = async (req, res) => {
     const { apiKey } = req.body;
     
     if (!apiKey) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'API key is required' 
+      return res.status(400).json({
+        success: false,
+        message: 'API key is required'
       });
     }
     
-    const isValid = await scraperService.verifyApiKey(apiKey);
+    const result = await scraperService.verifyApiKey(apiKey);
     
-    return res.status(200).json({
-      success: true,
-      isValid
+    return res.status(result.valid ? 200 : 400).json({
+      success: result.valid,
+      message: result.message
     });
   } catch (error) {
-    console.error('Error in verifyApiKey controller:', error);
+    console.error('Controller error in verifyApiKey:', error);
     return res.status(500).json({
       success: false,
       message: error.message || 'An error occurred while verifying the API key'

@@ -115,7 +115,7 @@ class ScraperService {
         limit: 10,
         scrapeOptions: {
           formats: ['markdown', 'html'],
-          metadata: true  // Changed from extractMetadata to metadata
+          extractMetadata: true  // Fixed: Changed 'metadata' to 'extractMetadata'
         }
       });
 

@@ -5,11 +5,13 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Loader2 } from 'lucide-react';
-import { scraperService } from '@/utils/scraper';
 
 interface ScraperFormProps {
   onResults: (results: any[]) => void;
 }
+
+// API endpoint URL
+const API_URL = 'http://localhost:5000/api/scraper';
 
 export default function ScraperForm({ onResults }: ScraperFormProps) {
   const [url, setUrl] = useState('');
@@ -27,11 +29,28 @@ export default function ScraperForm({ onResults }: ScraperFormProps) {
       setIsLoading(true);
       toast.info('Starting the scraping process...', { duration: 3000 });
       
-      const results = await scraperService.scrapeAmazonTVs(url);
-      console.log('Scraping results:', results);
-      onResults(results);
+      const response = await fetch(`${API_URL}/amazon`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to scrape the provided URL');
+      }
+
+      const result = await response.json();
+      console.log('Scraping results:', result);
       
-      toast.success('Scraping completed successfully!');
+      if (result.success && result.data) {
+        onResults(result.data);
+        toast.success('Scraping completed successfully!');
+      } else {
+        throw new Error('No data received from the server');
+      }
     } catch (error) {
       console.error('Scraping error:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to scrape the provided URL');

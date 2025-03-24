@@ -48,13 +48,13 @@ export default function ScraperForm({ onResults }: ScraperFormProps) {
     >
       <div className="glass-card rounded-xl p-6 shadow-lg">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold">Enter Amazon Smart TV URL</h2>
+          <h2 className="text-xl font-semibold">Enter Amazon Product URL</h2>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="relative">
             <Input
               type="text"
-              placeholder="https://www.amazon.com/s?k=smart+tv"
+              placeholder="https://www.amazon.com/dp/B09WZMR5WM"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               className="w-full pr-24 h-12 rounded-lg border-border/50 focus:border-primary"
@@ -79,7 +79,7 @@ export default function ScraperForm({ onResults }: ScraperFormProps) {
             </div>
           </div>
           <div className="text-sm text-muted-foreground">
-            Enter an Amazon URL for Smart TVs to begin scraping
+            Enter an Amazon product URL to extract detailed information
           </div>
         </form>
       </div>

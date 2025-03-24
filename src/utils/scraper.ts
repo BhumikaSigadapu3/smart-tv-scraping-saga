@@ -1,11 +1,18 @@
+
 import FirecrawlApp from '@mendable/firecrawl-js';
 
 interface ScraperResult {
   title: string;
   price: string;
   rating: string;
-  features: string[];
-  imageUrl: string;
+  numRatings: string;
+  discount: string;
+  bankOffers: string[];
+  aboutItem: string[];
+  productInfo: Record<string, string>;
+  imageUrls: string[];
+  manufacturerImages: string[];
+  reviewSummary: string;
   link: string;
 }
 
@@ -15,73 +22,63 @@ const mockTvData: ScraperResult[] = [
     title: "Amazon Fire TV 55\" Omni Series 4K UHD smart TV",
     price: "$399.99",
     rating: "4.5",
-    features: [
+    numRatings: "12,345",
+    discount: "20% off",
+    bankOffers: [
+      "10% instant discount on SBI Credit Cards",
+      "No cost EMI on select cards"
+    ],
+    aboutItem: [
       "4K UHD resolution",
       "HDR 10, HLG, Dolby Digital Plus",
       "Hands-free Alexa built-in"
     ],
-    imageUrl: "https://m.media-amazon.com/images/I/61LjkJzZ8NL._AC_SX522_.jpg",
+    productInfo: {
+      "Brand": "Amazon",
+      "Model": "Omni Series",
+      "Screen Size": "55 inches",
+      "Resolution": "4K UHD"
+    },
+    imageUrls: [
+      "https://m.media-amazon.com/images/I/61LjkJzZ8NL._AC_SX522_.jpg",
+      "https://m.media-amazon.com/images/I/71qPGY1kFOL._AC_SX522_.jpg"
+    ],
+    manufacturerImages: [
+      "https://m.media-amazon.com/images/S/aplus-media-library-service-media/70608852-7a94-4ebb-a3da-e3c70e4c8e48._CR0,0,1464,625_PT0_SX1464__.jpg"
+    ],
+    reviewSummary: "Users praise the picture quality and Alexa integration, but some mention the sound quality could be improved.",
     link: "https://www.amazon.com/dp/B08SVZ775L"
   },
   {
     title: "TCL 55-inch Class 4-Series 4K UHD HDR Smart Roku TV",
     price: "$319.99",
     rating: "4.6",
-    features: [
+    numRatings: "8,721",
+    discount: "15% off",
+    bankOffers: [
+      "5% cash back with Amazon Pay ICICI Card",
+      "No cost EMI available"
+    ],
+    aboutItem: [
       "4K Ultra HD Resolution",
       "Roku Smart TV Platform",
       "HDR Technology"
     ],
-    imageUrl: "https://m.media-amazon.com/images/I/71RyRHZfRkL._AC_SX679_.jpg",
+    productInfo: {
+      "Brand": "TCL",
+      "Model": "4-Series",
+      "Screen Size": "55 inches",
+      "Resolution": "4K UHD"
+    },
+    imageUrls: [
+      "https://m.media-amazon.com/images/I/71RyRHZfRkL._AC_SX679_.jpg",
+      "https://m.media-amazon.com/images/I/61GJoXzS5qL._AC_SX679_.jpg"
+    ],
+    manufacturerImages: [
+      "https://m.media-amazon.com/images/S/aplus-media-library-service-media/a7b8ac3c-d33a-4099-a6d9-f53a45e9411c._CR0,0,970,300_PT0_SX970__.jpg"
+    ],
+    reviewSummary: "Customers love the value for money and easy Roku interface, though some note the viewing angles could be better.",
     link: "https://www.amazon.com/dp/B08DHFX4FV"
-  },
-  {
-    title: "Samsung 65-Inch Class Crystal UHD AU8000 Series",
-    price: "$547.99",
-    rating: "4.7",
-    features: [
-      "Crystal Processor 4K",
-      "HDR",
-      "Built-in Voice Assistants"
-    ],
-    imageUrl: "https://m.media-amazon.com/images/I/71LJJrKbezL._AC_SX679_.jpg",
-    link: "https://www.amazon.com/dp/B08Z25RV2C"
-  },
-  {
-    title: "Sony 55 Inch 4K Ultra HD TV X80K Series",
-    price: "$598.00",
-    rating: "4.4",
-    features: [
-      "4K HDR Processor X1",
-      "TRILUMINOS PRO Display",
-      "Google TV with Google Assistant"
-    ],
-    imageUrl: "https://m.media-amazon.com/images/I/81et35MprAL._AC_SX679_.jpg",
-    link: "https://www.amazon.com/dp/B09NVPYCB8"
-  },
-  {
-    title: "LG 65-Inch Class UQ9000 Series LED 4K UHD Smart webOS TV",
-    price: "$496.99",
-    rating: "4.3",
-    features: [
-      "α5 Gen5 AI Processor 4K",
-      "webOS 22",
-      "Filmmaker Mode & Game Optimizer"
-    ],
-    imageUrl: "https://m.media-amazon.com/images/I/A1SZVvYzbxL._AC_SX679_.jpg",
-    link: "https://www.amazon.com/dp/B09VCB4X67"
-  },
-  {
-    title: "Hisense 55-Inch Class R6 Series Dolby Vision HDR 4K UHD Roku Smart TV",
-    price: "$289.99",
-    rating: "4.5",
-    features: [
-      "4K Ultra HD Resolution",
-      "Dolby Vision HDR & HDR10",
-      "Roku TV Smart Platform"
-    ],
-    imageUrl: "https://m.media-amazon.com/images/I/81maxtl8J1L._AC_SX679_.jpg",
-    link: "https://www.amazon.com/dp/B0BTZMQPS8"
   }
 ];
 
@@ -109,9 +106,6 @@ class ScraperService {
   async scrapeAmazonTVs(url: string): Promise<ScraperResult[]> {
     console.log('Scraping URL with Firecrawl:', url);
     
-    // Remove the Amazon URL validation to accept any URL
-    // We'll let the API handle any URL issues
-
     try {
       if (!this.firecrawlApp) {
         this.firecrawlApp = new FirecrawlApp({ apiKey: this.API_KEY });
@@ -120,7 +114,8 @@ class ScraperService {
       const crawlResponse = await this.firecrawlApp.crawlUrl(url, {
         limit: 10,
         scrapeOptions: {
-          formats: ['markdown', 'html']
+          formats: ['markdown', 'html'],
+          extractMetadata: true
         }
       });
 
@@ -134,17 +129,39 @@ class ScraperService {
       // Parse the Firecrawl data to match our ScraperResult interface
       if (crawlResponse.data && crawlResponse.data.length > 0) {
         // Try to extract product information from the data
-        const products = crawlResponse.data.map((item: any) => {
-          // Extract product information from the crawled data
+        const products: ScraperResult[] = crawlResponse.data.map((item: any) => {
+          // Extract product information
+          const metadata = item.metadata || {};
+          const content = item.content || "";
+          
+          // Use regex and content analysis to extract specific details
+          // These are simplified extractors - in a real implementation you would have more robust parsing
+          const extractedPrice = metadata.price || this.extractPrice(content);
+          const extractedRating = metadata.rating || this.extractRating(content);
+          const extractedNumRatings = this.extractNumRatings(content);
+          const extractedDiscount = this.extractDiscount(content);
+          const extractedBankOffers = this.extractBankOffers(content);
+          const extractedAboutItem = this.extractAboutItem(content);
+          const extractedProductInfo = this.extractProductInfo(content);
+          const extractedImageUrls = metadata.images || [metadata.image] || this.extractImages(content);
+          const extractedManufacturerImages = this.extractManufacturerImages(content);
+          const reviewSummary = this.generateReviewSummary(content);
+          
           return {
-            title: item.title || item.metadata?.title || 'Unknown TV',
-            price: item.metadata?.price || 'Price unavailable',
-            rating: item.metadata?.rating || '0',
-            features: item.metadata?.features || [],
-            imageUrl: item.metadata?.image || 'https://via.placeholder.com/300x200?text=No+Image',
+            title: metadata.title || this.extractTitle(content) || 'Unknown Product',
+            price: extractedPrice || 'Price unavailable',
+            rating: extractedRating || 'No ratings',
+            numRatings: extractedNumRatings || '0',
+            discount: extractedDiscount || 'No discount',
+            bankOffers: extractedBankOffers.length > 0 ? extractedBankOffers : ['No bank offers available'],
+            aboutItem: extractedAboutItem.length > 0 ? extractedAboutItem : ['No product details available'],
+            productInfo: extractedProductInfo,
+            imageUrls: extractedImageUrls.filter(Boolean),
+            manufacturerImages: extractedManufacturerImages.filter(Boolean),
+            reviewSummary: reviewSummary || 'No review summary available',
             link: item.url || url
           };
-        }).filter((product: ScraperResult) => product.title !== 'Unknown TV');
+        }).filter((product: ScraperResult) => product.title !== 'Unknown Product');
 
         if (products.length > 0) {
           return products;
@@ -159,6 +176,154 @@ class ScraperService {
       // Return mock data on error to ensure the UI has something to display
       return mockTvData;
     }
+  }
+
+  // Helper methods to extract specific data from the content
+  private extractTitle(content: string): string {
+    // Simple regex to find product title (would need to be improved)
+    const titleMatch = content.match(/<h1[^>]*>(.*?)<\/h1>/i);
+    return titleMatch ? titleMatch[1].trim() : '';
+  }
+
+  private extractPrice(content: string): string {
+    // Try to find price patterns (₹, $, etc.)
+    const priceMatch = content.match(/₹\s?[\d,]+\.?\d*|₹\d+,\d+|\$\s?[\d,]+\.?\d*/i);
+    return priceMatch ? priceMatch[0].trim() : '';
+  }
+
+  private extractRating(content: string): string {
+    // Look for patterns like "4.5 out of 5 stars"
+    const ratingMatch = content.match(/(\d+\.?\d*)\s*out of\s*\d+\s*stars/i);
+    return ratingMatch ? ratingMatch[1].trim() : '';
+  }
+
+  private extractNumRatings(content: string): string {
+    // Look for patterns like "12,345 ratings"
+    const ratingsMatch = content.match(/([\d,]+)\s*ratings/i);
+    return ratingsMatch ? ratingsMatch[1].trim() : '';
+  }
+
+  private extractDiscount(content: string): string {
+    // Look for discount percentages
+    const discountMatch = content.match(/(\d+%)\s*off/i);
+    return discountMatch ? discountMatch[1].trim() : '';
+  }
+
+  private extractBankOffers(content: string): string[] {
+    // This is a simplified approach - would need more sophisticated parsing
+    const bankOfferSection = content.match(/bank offers?:?\s*(.*?)(?:\n\n|\n\w)/is);
+    if (bankOfferSection && bankOfferSection[1]) {
+      return bankOfferSection[1]
+        .split(/\n|•|<li>/)
+        .map(offer => offer.trim())
+        .filter(offer => offer.length > 5);
+    }
+    return [];
+  }
+
+  private extractAboutItem(content: string): string[] {
+    // Look for "About this item" section
+    const aboutMatch = content.match(/about this item:?\s*(.*?)(?:\n\n|\n\w)/is);
+    if (aboutMatch && aboutMatch[1]) {
+      return aboutMatch[1]
+        .split(/\n|•|<li>/)
+        .map(item => item.trim())
+        .filter(item => item.length > 3);
+    }
+    
+    // Try matching list items
+    const listItems = content.match(/<li[^>]*>(.*?)<\/li>/gi);
+    if (listItems) {
+      return listItems
+        .map(item => item.replace(/<[^>]*>/g, '').trim())
+        .filter(item => item.length > 3);
+    }
+    
+    return [];
+  }
+
+  private extractProductInfo(content: string): Record<string, string> {
+    const productInfo: Record<string, string> = {};
+    
+    // Look for product specifications in tables
+    const tableMatch = content.match(/<table[^>]*>(.*?)<\/table>/is);
+    if (tableMatch) {
+      const rowMatches = tableMatch[1].match(/<tr[^>]*>(.*?)<\/tr>/gi);
+      if (rowMatches) {
+        rowMatches.forEach(row => {
+          const cells = row.match(/<t[dh][^>]*>(.*?)<\/t[dh]>/gi);
+          if (cells && cells.length >= 2) {
+            const key = cells[0].replace(/<[^>]*>/g, '').trim();
+            const value = cells[1].replace(/<[^>]*>/g, '').trim();
+            if (key && value) {
+              productInfo[key] = value;
+            }
+          }
+        });
+      }
+    }
+    
+    // If no tables found, try looking for key-value pairs in the text
+    if (Object.keys(productInfo).length === 0) {
+      const lines = content.split('\n');
+      lines.forEach(line => {
+        const match = line.match(/([^:]+):\s*(.*)/);
+        if (match && match[1] && match[2]) {
+          const key = match[1].trim();
+          const value = match[2].trim();
+          if (key && value) {
+            productInfo[key] = value;
+          }
+        }
+      });
+    }
+    
+    return productInfo;
+  }
+
+  private extractImages(content: string): string[] {
+    // Extract image URLs from img tags
+    const imgTags = content.match(/<img[^>]*src=["'](https?:\/\/[^"']+)["'][^>]*>/gi);
+    if (imgTags) {
+      return imgTags
+        .map(tag => {
+          const srcMatch = tag.match(/src=["'](https?:\/\/[^"']+)["']/i);
+          return srcMatch ? srcMatch[1] : null;
+        })
+        .filter(Boolean) as string[];
+    }
+    return [];
+  }
+
+  private extractManufacturerImages(content: string): string[] {
+    // Look for manufacturer section
+    const manufacturerSection = content.match(/from the manufacturer:?\s*(.*?)(?:\n\n|\n\w)/is);
+    if (manufacturerSection) {
+      const imgTags = manufacturerSection[1].match(/<img[^>]*src=["'](https?:\/\/[^"']+)["'][^>]*>/gi);
+      if (imgTags) {
+        return imgTags
+          .map(tag => {
+            const srcMatch = tag.match(/src=["'](https?:\/\/[^"']+)["']/i);
+            return srcMatch ? srcMatch[1] : null;
+          })
+          .filter(Boolean) as string[];
+      }
+    }
+    return [];
+  }
+
+  private generateReviewSummary(content: string): string {
+    // This would typically involve AI processing, but we'll mock it with a simple extraction
+    const reviewSection = content.match(/customer reviews:?\s*(.*?)(?:\n\n|\n\w)/is);
+    if (reviewSection) {
+      const sentences = reviewSection[1].split(/\.\s*/);
+      // Take the first two sentences as a simple summary
+      if (sentences.length > 1) {
+        return sentences.slice(0, 2).join('. ') + '.';
+      }
+      return reviewSection[1].trim();
+    }
+    return '';
   }
 }
 

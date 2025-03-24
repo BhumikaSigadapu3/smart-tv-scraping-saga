@@ -28,6 +28,7 @@ export default function ScraperForm({ onResults }: ScraperFormProps) {
       toast.info('Starting the scraping process...', { duration: 3000 });
       
       const results = await scraperService.scrapeAmazonTVs(url);
+      console.log('Scraping results:', results);
       onResults(results);
       
       toast.success('Scraping completed successfully!');
@@ -79,7 +80,7 @@ export default function ScraperForm({ onResults }: ScraperFormProps) {
             </div>
           </div>
           <div className="text-sm text-muted-foreground">
-            Enter an Amazon product URL to extract detailed information
+            Enter an Amazon product URL to extract detailed information including product name, price, ratings, discounts, bank offers, technical specifications, and images.
           </div>
         </form>
       </div>

@@ -115,7 +115,7 @@ class ScraperService {
         limit: 10,
         scrapeOptions: {
           formats: ['markdown', 'html'],
-          extractMetadata: true
+          metadata: true  // Changed from extractMetadata to metadata
         }
       });
 
@@ -130,41 +130,39 @@ class ScraperService {
       if (crawlResponse.data && crawlResponse.data.length > 0) {
         // Try to extract product information from the data
         const products: ScraperResult[] = crawlResponse.data.map((item: any) => {
-          // Extract product information
+          // Extract product information from both HTML and text content
           const metadata = item.metadata || {};
-          const content = item.content || "";
+          const htmlContent = item.html || "";
+          const textContent = item.markdown || item.content || "";
+          const content = htmlContent + "\n" + textContent;
           
-          // Use regex and content analysis to extract specific details
-          // These are simplified extractors - in a real implementation you would have more robust parsing
-          const extractedPrice = metadata.price || this.extractPrice(content);
-          const extractedRating = metadata.rating || this.extractRating(content);
-          const extractedNumRatings = this.extractNumRatings(content);
-          const extractedDiscount = this.extractDiscount(content);
-          const extractedBankOffers = this.extractBankOffers(content);
-          const extractedAboutItem = this.extractAboutItem(content);
-          const extractedProductInfo = this.extractProductInfo(content);
-          const extractedImageUrls = metadata.images || [metadata.image] || this.extractImages(content);
-          const extractedManufacturerImages = this.extractManufacturerImages(content);
-          const reviewSummary = this.generateReviewSummary(content);
-          
+          // Enhanced extraction for Amazon product details
           return {
-            title: metadata.title || this.extractTitle(content) || 'Unknown Product',
-            price: extractedPrice || 'Price unavailable',
-            rating: extractedRating || 'No ratings',
-            numRatings: extractedNumRatings || '0',
-            discount: extractedDiscount || 'No discount',
-            bankOffers: extractedBankOffers.length > 0 ? extractedBankOffers : ['No bank offers available'],
-            aboutItem: extractedAboutItem.length > 0 ? extractedAboutItem : ['No product details available'],
-            productInfo: extractedProductInfo,
-            imageUrls: extractedImageUrls.filter(Boolean),
-            manufacturerImages: extractedManufacturerImages.filter(Boolean),
-            reviewSummary: reviewSummary || 'No review summary available',
+            title: this.extractTitle(content, metadata),
+            price: this.extractPrice(content, metadata),
+            rating: this.extractRating(content, metadata),
+            numRatings: this.extractNumRatings(content, metadata),
+            discount: this.extractDiscount(content, metadata),
+            bankOffers: this.extractBankOffers(content),
+            aboutItem: this.extractAboutItem(content),
+            productInfo: this.extractProductInfo(content),
+            imageUrls: this.extractProductImages(content, metadata),
+            manufacturerImages: this.extractManufacturerImages(content),
+            reviewSummary: this.generateReviewSummary(content),
             link: item.url || url
           };
-        }).filter((product: ScraperResult) => product.title !== 'Unknown Product');
+        });
 
-        if (products.length > 0) {
-          return products;
+        console.log('Extracted products:', products);
+
+        // Filter out products that don't have at least a title and some basic info
+        const validProducts = products.filter(product => 
+          product.title && 
+          (product.price || product.rating || product.imageUrls.length > 0)
+        );
+
+        if (validProducts.length > 0) {
+          return validProducts;
         }
       }
       
@@ -178,152 +176,368 @@ class ScraperService {
     }
   }
 
-  // Helper methods to extract specific data from the content
-  private extractTitle(content: string): string {
-    // Simple regex to find product title (would need to be improved)
-    const titleMatch = content.match(/<h1[^>]*>(.*?)<\/h1>/i);
-    return titleMatch ? titleMatch[1].trim() : '';
+  // Enhanced helper methods to extract specific data from the content
+  private extractTitle(content: string, metadata: any): string {
+    // First try metadata
+    if (metadata.title) return metadata.title;
+    if (metadata.ogTitle) return metadata.ogTitle;
+    
+    // Try to find product title in HTML
+    const titleMatch = content.match(/<h1[^>]*>([^<]+)<\/h1>/i) || 
+                      content.match(/id="productTitle"[^>]*>([^<]+)<\/span>/i) ||
+                      content.match(/class="product-title"[^>]*>([^<]+)<\/span>/i);
+    
+    // Try to find product title in text content
+    const textTitleMatch = content.match(/productTitle.*?\n(.*?)(?:\n|$)/i) ||
+                          content.match(/Product Name:?\s*(.*?)(?:\n|$)/i);
+    
+    return (titleMatch && titleMatch[1].trim()) || 
+           (textTitleMatch && textTitleMatch[1].trim()) || 
+           'Unknown Product';
   }
 
-  private extractPrice(content: string): string {
-    // Try to find price patterns (₹, $, etc.)
-    const priceMatch = content.match(/₹\s?[\d,]+\.?\d*|₹\d+,\d+|\$\s?[\d,]+\.?\d*/i);
-    return priceMatch ? priceMatch[0].trim() : '';
+  private extractPrice(content: string, metadata: any): string {
+    // First try metadata
+    if (metadata.price) return metadata.price;
+    
+    // Look for various price patterns
+    const priceMatches = [
+      content.match(/deal-price.*?₹\s?([\d,]+\.?\d*)|₹\s?([\d,]+\.?\d*)/i),
+      content.match(/price.*?₹\s?([\d,]+\.?\d*)|₹\s?([\d,]+\.?\d*)/i),
+      content.match(/\$\s?([\d,]+\.?\d*)/i),
+      content.match(/price.*?RS\.?\s?([\d,]+\.?\d*)/i),
+      content.match(/class="a-price"[^>]*>([^<]+)/i),
+      content.match(/deal of the day:?\s*([\d,]+\.?\d*)/i),
+      content.match(/price:?\s*₹\s?([\d,]+\.?\d*)|price:?\s*\$\s?([\d,]+\.?\d*)/i)
+    ];
+    
+    for (const match of priceMatches) {
+      if (match) {
+        const price = match[1] || match[2];
+        if (price) {
+          return match[0].includes('₹') ? `₹${price}` : 
+                 match[0].includes('$') ? `$${price}` : 
+                 match[0].includes('RS') ? `Rs.${price}` : 
+                 price;
+        }
+      }
+    }
+    
+    return 'Price unavailable';
   }
 
-  private extractRating(content: string): string {
-    // Look for patterns like "4.5 out of 5 stars"
-    const ratingMatch = content.match(/(\d+\.?\d*)\s*out of\s*\d+\s*stars/i);
-    return ratingMatch ? ratingMatch[1].trim() : '';
+  private extractRating(content: string, metadata: any): string {
+    // First try metadata
+    if (metadata.rating) return metadata.rating;
+    
+    // Look for rating patterns
+    const ratingMatches = [
+      content.match(/(\d+\.?\d*)\s*out of\s*\d+\s*stars/i),
+      content.match(/rating:?\s*(\d+\.?\d*)\s*\/\s*5/i),
+      content.match(/class="a-icon-alt"[^>]*>([^<]+)/i)
+    ];
+    
+    for (const match of ratingMatches) {
+      if (match && match[1]) {
+        const rating = parseFloat(match[1]);
+        if (!isNaN(rating)) {
+          return rating.toString();
+        }
+      }
+    }
+    
+    return 'No ratings';
   }
 
-  private extractNumRatings(content: string): string {
-    // Look for patterns like "12,345 ratings"
-    const ratingsMatch = content.match(/([\d,]+)\s*ratings/i);
-    return ratingsMatch ? ratingsMatch[1].trim() : '';
+  private extractNumRatings(content: string, metadata: any): string {
+    // Look for review count patterns
+    const reviewCountMatches = [
+      content.match(/([\d,]+)\s*ratings/i),
+      content.match(/([\d,]+)\s*reviews/i),
+      content.match(/(\d+,\d+|\d+)\s*global ratings/i),
+      content.match(/(\d+,\d+|\d+)\s*global reviews/i)
+    ];
+    
+    for (const match of reviewCountMatches) {
+      if (match && match[1]) {
+        return match[1];
+      }
+    }
+    
+    return '0';
   }
 
-  private extractDiscount(content: string): string {
-    // Look for discount percentages
-    const discountMatch = content.match(/(\d+%)\s*off/i);
-    return discountMatch ? discountMatch[1].trim() : '';
+  private extractDiscount(content: string, metadata: any): string {
+    // Look for discount patterns
+    const discountMatches = [
+      content.match(/(\d+%)\s*off/i),
+      content.match(/save\s*(\d+%)/i),
+      content.match(/discount:?\s*(\d+%)/i),
+      content.match(/You Save:?\s*₹\s?([\d,]+\.?\d*)|you save:?\s*\$\s?([\d,]+\.?\d*)/i)
+    ];
+    
+    for (const match of discountMatches) {
+      if (match && (match[1] || match[2])) {
+        return match[1] || match[2] || 'No discount';
+      }
+    }
+    
+    return 'No discount';
   }
 
   private extractBankOffers(content: string): string[] {
-    // This is a simplified approach - would need more sophisticated parsing
-    const bankOfferSection = content.match(/bank offers?:?\s*(.*?)(?:\n\n|\n\w)/is);
-    if (bankOfferSection && bankOfferSection[1]) {
-      return bankOfferSection[1]
-        .split(/\n|•|<li>/)
-        .map(offer => offer.trim())
-        .filter(offer => offer.length > 5);
+    // Look for bank offer sections
+    const bankOfferSections = [
+      content.match(/bank offers?:?\s*(.*?)(?:\n\n|\n\w|<\/)/is),
+      content.match(/offers?:?\s*(.*?)(?:\n\n|\n\w|<\/)/is),
+      content.match(/payment:?\s*(.*?)(?:\n\n|\n\w|<\/)/is),
+      content.match(/EMI?:?\s*(.*?)(?:\n\n|\n\w|<\/)/is)
+    ];
+    
+    let offers: string[] = [];
+    
+    for (const section of bankOfferSections) {
+      if (section && section[1]) {
+        const sectionOffers = section[1]
+          .split(/\n|•|<li>|<br>/)
+          .map(offer => offer.replace(/<[^>]+>/g, '').trim())
+          .filter(offer => offer.length > 5 && 
+                (offer.includes('bank') || 
+                 offer.includes('credit') || 
+                 offer.includes('debit') || 
+                 offer.includes('card') || 
+                 offer.includes('EMI') || 
+                 offer.includes('cashback') || 
+                 offer.includes('discount') || 
+                 offer.includes('offer')));
+        
+        offers = [...offers, ...sectionOffers];
+      }
     }
-    return [];
+    
+    // Look for list items that might contain bank offers
+    const listItems = content.match(/<li[^>]*>(.*?)<\/li>/gi);
+    if (listItems) {
+      const potentialOffers = listItems
+        .map(item => item.replace(/<[^>]*>/g, '').trim())
+        .filter(item => item.length > 5 && 
+               (item.includes('bank') || 
+                item.includes('credit') || 
+                item.includes('debit') || 
+                item.includes('card') || 
+                item.includes('EMI') || 
+                item.includes('cashback') || 
+                item.includes('discount') || 
+                item.includes('offer')));
+      
+      offers = [...offers, ...potentialOffers];
+    }
+    
+    return offers.length > 0 ? offers : ['No bank offers available'];
   }
 
   private extractAboutItem(content: string): string[] {
-    // Look for "About this item" section
-    const aboutMatch = content.match(/about this item:?\s*(.*?)(?:\n\n|\n\w)/is);
-    if (aboutMatch && aboutMatch[1]) {
-      return aboutMatch[1]
-        .split(/\n|•|<li>/)
-        .map(item => item.trim())
-        .filter(item => item.length > 3);
+    // First look for "About this item" section
+    const aboutSections = [
+      content.match(/about this item:?\s*(.*?)(?:\n\n|\n\w|<\/div>)/is),
+      content.match(/product description:?\s*(.*?)(?:\n\n|\n\w|<\/div>)/is),
+      content.match(/overview:?\s*(.*?)(?:\n\n|\n\w|<\/div>)/is),
+      content.match(/features:?\s*(.*?)(?:\n\n|\n\w|<\/div>)/is)
+    ];
+    
+    let aboutItems: string[] = [];
+    
+    for (const section of aboutSections) {
+      if (section && section[1]) {
+        const sectionItems = section[1]
+          .split(/\n|•|<li>|<br>/)
+          .map(item => item.replace(/<[^>]+>/g, '').trim())
+          .filter(item => item.length > 3);
+        
+        aboutItems = [...aboutItems, ...sectionItems];
+      }
     }
     
-    // Try matching list items
-    const listItems = content.match(/<li[^>]*>(.*?)<\/li>/gi);
-    if (listItems) {
-      return listItems
-        .map(item => item.replace(/<[^>]*>/g, '').trim())
-        .filter(item => item.length > 3);
+    // Try matching list items that might be about the product
+    const bulletLists = content.match(/<ul[^>]*>(.*?)<\/ul>/gis);
+    if (bulletLists) {
+      for (const list of bulletLists) {
+        if (list.toLowerCase().includes('feature') || 
+            list.toLowerCase().includes('about') || 
+            list.toLowerCase().includes('description')) {
+          
+          const listItems = list.match(/<li[^>]*>(.*?)<\/li>/gi);
+          if (listItems) {
+            const items = listItems
+              .map(item => item.replace(/<[^>]*>/g, '').trim())
+              .filter(item => item.length > 3);
+            
+            aboutItems = [...aboutItems, ...items];
+          }
+        }
+      }
     }
     
-    return [];
+    return aboutItems.length > 0 ? aboutItems : ['No product details available'];
   }
 
   private extractProductInfo(content: string): Record<string, string> {
     const productInfo: Record<string, string> = {};
     
-    // Look for product specifications in tables
-    const tableMatch = content.match(/<table[^>]*>(.*?)<\/table>/is);
-    if (tableMatch) {
-      const rowMatches = tableMatch[1].match(/<tr[^>]*>(.*?)<\/tr>/gi);
-      if (rowMatches) {
-        rowMatches.forEach(row => {
-          const cells = row.match(/<t[dh][^>]*>(.*?)<\/t[dh]>/gi);
-          if (cells && cells.length >= 2) {
-            const key = cells[0].replace(/<[^>]*>/g, '').trim();
-            const value = cells[1].replace(/<[^>]*>/g, '').trim();
-            if (key && value) {
-              productInfo[key] = value;
+    // Look for product specifications in tables or tech details sections
+    const sections = [
+      content.match(/<table[^>]*>(.*?)<\/table>/gis),
+      content.match(/Technical Details:?\s*(.*?)(?:\n\n|\n\w|<\/div>)/is),
+      content.match(/Technical Specifications:?\s*(.*?)(?:\n\n|\n\w|<\/div>)/is),
+      content.match(/Specifications:?\s*(.*?)(?:\n\n|\n\w|<\/div>)/is),
+      content.match(/Product Information:?\s*(.*?)(?:\n\n|\n\w|<\/div>)/is)
+    ];
+    
+    // Process tables first
+    const tables = sections[0];
+    if (tables) {
+      for (const table of tables) {
+        const rows = table.match(/<tr[^>]*>(.*?)<\/tr>/gis);
+        if (rows) {
+          for (const row of rows) {
+            const cells = row.match(/<t[dh][^>]*>(.*?)<\/t[dh]>/gi);
+            if (cells && cells.length >= 2) {
+              const key = cells[0].replace(/<[^>]*>/g, '').trim();
+              const value = cells[1].replace(/<[^>]*>/g, '').trim();
+              if (key && value && key.length < 100) { // Avoid very long keys
+                productInfo[key] = value;
+              }
             }
           }
-        });
+        }
       }
     }
     
-    // If no tables found, try looking for key-value pairs in the text
+    // Process text sections with potential specifications
+    for (let i = 1; i < sections.length; i++) {
+      const section = sections[i];
+      if (section && section[1]) {
+        const lines = section[1].split(/\n|<br>/);
+        for (const line of lines) {
+          const match = line.replace(/<[^>]*>/g, '').match(/([^:]+):\s*(.*)/);
+          if (match && match[1] && match[2]) {
+            const key = match[1].trim();
+            const value = match[2].trim();
+            if (key && value && key.length < 100) { // Avoid very long keys
+              productInfo[key] = value;
+            }
+          }
+        }
+      }
+    }
+    
+    // Look for key-value pairs in the content
     if (Object.keys(productInfo).length === 0) {
-      const lines = content.split('\n');
-      lines.forEach(line => {
-        const match = line.match(/([^:]+):\s*(.*)/);
+      const lines = content.split(/\n|<br>/);
+      for (const line of lines) {
+        const cleanLine = line.replace(/<[^>]*>/g, '');
+        const match = cleanLine.match(/([^:]{2,50}):\s*(.*)/);
         if (match && match[1] && match[2]) {
           const key = match[1].trim();
           const value = match[2].trim();
-          if (key && value) {
+          if (key && value && key.length < 100 && value.length < 500) {
             productInfo[key] = value;
           }
         }
-      });
+      }
     }
     
     return productInfo;
   }
 
-  private extractImages(content: string): string[] {
-    // Extract image URLs from img tags
-    const imgTags = content.match(/<img[^>]*src=["'](https?:\/\/[^"']+)["'][^>]*>/gi);
-    if (imgTags) {
-      return imgTags
-        .map(tag => {
-          const srcMatch = tag.match(/src=["'](https?:\/\/[^"']+)["']/i);
-          return srcMatch ? srcMatch[1] : null;
-        })
-        .filter(Boolean) as string[];
+  private extractProductImages(content: string, metadata: any): string[] {
+    let images: string[] = [];
+    
+    // Try metadata first
+    if (metadata.images && Array.isArray(metadata.images)) {
+      images = [...metadata.images];
+    } else if (metadata.image) {
+      images.push(metadata.image);
     }
-    return [];
+    
+    // Extract image URLs from img tags
+    const imgRegex = /<img[^>]*src=["'](https?:\/\/[^"']+)["'][^>]*>/gi;
+    let match;
+    while ((match = imgRegex.exec(content)) !== null) {
+      const imgUrl = match[1];
+      // Only include Amazon images and filter out small icons
+      if (imgUrl.includes('amazon') && 
+          !imgUrl.includes('icon') && 
+          !imgUrl.includes('logo') && 
+          !imgUrl.includes('sprite') &&
+          !imgUrl.includes('transparent-pixel') &&
+          !images.includes(imgUrl)) {
+        images.push(imgUrl);
+      }
+    }
+    
+    return images.filter(url => url && url.length > 10);
   }
 
   private extractManufacturerImages(content: string): string[] {
-    // Look for manufacturer section
-    const manufacturerSection = content.match(/from the manufacturer:?\s*(.*?)(?:\n\n|\n\w)/is);
-    if (manufacturerSection) {
-      const imgTags = manufacturerSection[1].match(/<img[^>]*src=["'](https?:\/\/[^"']+)["'][^>]*>/gi);
-      if (imgTags) {
-        return imgTags
-          .map(tag => {
-            const srcMatch = tag.match(/src=["'](https?:\/\/[^"']+)["']/i);
-            return srcMatch ? srcMatch[1] : null;
-          })
-          .filter(Boolean) as string[];
+    // Look for manufacturer section which often has product images
+    const manufacturerSections = [
+      content.match(/from the manufacturer:?\s*(.*?)(?:\n\n|\n\w|<\/div>)/is),
+      content.match(/from manufacturer:?\s*(.*?)(?:\n\n|\n\w|<\/div>)/is),
+      content.match(/manufacturer:?\s*(.*?)(?:\n\n|\n\w|<\/div>)/is)
+    ];
+    
+    let images: string[] = [];
+    
+    for (const section of manufacturerSections) {
+      if (section && section[1]) {
+        const imgRegex = /<img[^>]*src=["'](https?:\/\/[^"']+)["'][^>]*>/gi;
+        let match;
+        while ((match = imgRegex.exec(section[1])) !== null) {
+          const imgUrl = match[1];
+          // Filter out small icons and logos
+          if (!imgUrl.includes('icon') && 
+              !imgUrl.includes('logo') && 
+              !imgUrl.includes('sprite') &&
+              !imgUrl.includes('transparent-pixel') &&
+              !images.includes(imgUrl)) {
+            images.push(imgUrl);
+          }
+        }
       }
     }
-    return [];
+    
+    return images.filter(url => url && url.length > 10);
   }
 
   private generateReviewSummary(content: string): string {
-    // This would typically involve AI processing, but we'll mock it with a simple extraction
-    const reviewSection = content.match(/customer reviews:?\s*(.*?)(?:\n\n|\n\w)/is);
-    if (reviewSection) {
-      const sentences = reviewSection[1].split(/\.\s*/);
-      // Take the first two sentences as a simple summary
-      if (sentences.length > 1) {
-        return sentences.slice(0, 2).join('. ') + '.';
+    // Look for review sections
+    const reviewSections = [
+      content.match(/customer reviews:?\s*(.*?)(?:\n\n|\n\w|<\/div>)/is),
+      content.match(/reviews:?\s*(.*?)(?:\n\n|\n\w|<\/div>)/is),
+      content.match(/ratings:?\s*(.*?)(?:\n\n|\n\w|<\/div>)/is)
+    ];
+    
+    for (const section of reviewSections) {
+      if (section && section[1]) {
+        const cleanText = section[1].replace(/<[^>]*>/g, ' ').trim();
+        const sentences = cleanText.split(/\.\s*/);
+        
+        if (sentences.length > 1) {
+          // Take up to 3 sentences
+          return sentences.slice(0, 3).join('. ') + '.';
+        }
+        return cleanText;
       }
-      return reviewSection[1].trim();
     }
-    return '';
+    
+    // If no review section found, look for review snippets
+    const reviewSnippets = content.match(/reviews?:?\s*["']([^"']+)["']/gi);
+    if (reviewSnippets && reviewSnippets.length > 0) {
+      return reviewSnippets[0].replace(/reviews?:?\s*["']([^"']+)["']/i, '$1');
+    }
+    
+    return 'No review summary available';
   }
 }
 

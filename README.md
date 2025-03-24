@@ -30,10 +30,13 @@ It fetches key details like **ratings, discounts, bank offers, technical specifi
 - **Database**: MongoDB / PostgreSQL  
 - **Web Scraping**: Puppeteer / Scrapy  
 - **AI Integration**: OpenAI API, ElevenLabs API  
-- **Cloud Deployment**: Netlify, Firebase, AWS  (There is a minor problem while deploying backend so I couldn't provide the Live Demo link)
-
+- **Cloud Deployment**: Netlify, Firebase, AWS  
 ---
 
+## 🚀 Live Demo  
+🔗 **Coming Soon!** _(Deployment in progress)_  
+
+---
 ## 🔧 How to Run Locally  
 
 ### 1️⃣ Clone the repository  

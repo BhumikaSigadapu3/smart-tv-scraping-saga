@@ -5,8 +5,8 @@ It fetches key details like **ratings, discounts, bank offers, technical specifi
 
 ---
 
-## 🚀 Live Demo  
-🔗 [**Click here to access the web scraper**](https://amazonsmarttvwebscraper.netlify.app/)  
+##Screenshots of Application:
+![image](https://github.com/user-attachments/assets/bb03589a-f65d-40d8-ac7e-a8ab8d7bf990)
 
 ---
 

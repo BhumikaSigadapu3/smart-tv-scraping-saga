@@ -115,7 +115,7 @@ class ScraperService {
         limit: 10,
         scrapeOptions: {
           formats: ['markdown', 'html'],
-          extractMetadata: true  // Fixed: Changed 'metadata' to 'extractMetadata'
+          metadata: true  // Changed 'extractMetadata' to 'metadata' to match Firecrawl API
         }
       });
 

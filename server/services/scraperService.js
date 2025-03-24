@@ -20,7 +20,7 @@ class ScraperService {
         limit: 1,
         scrapeOptions: {
           formats: ['text'],
-          extractMetadata: true
+          metadata: true  // Changed from extractMetadata to metadata
         }
       });
       
@@ -42,7 +42,7 @@ class ScraperService {
         limit: 10,
         scrapeOptions: {
           formats: ['markdown', 'html'],
-          extractMetadata: true
+          metadata: true  // Changed from extractMetadata to metadata
         }
       });
 
